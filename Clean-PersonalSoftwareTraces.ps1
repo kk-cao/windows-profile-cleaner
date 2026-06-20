@@ -217,8 +217,10 @@ function App-FromLeaf {
     "QQ Files" { "QQ"; break }
     "Baidu*" { "BaiduNetdisk"; break }
     "Eagle*" { "Eagle"; break }
+    "*.library" { "Eagle"; break }
     "D5*" { "D5 Render"; break }
     "Jianying*" { "Jianying"; break }
+    "com.lveditor.draft" { "Jianying"; break }
     "CapCut" { "CapCut"; break }
     "Autodesk" { "Autodesk"; break }
     "AutoCAD" { "Autodesk"; break }
@@ -269,6 +271,10 @@ function Installed-Hints {
 
 function Standard-Targets {
   $tgt = @()
+  $kujialeCn = -join ([char[]](0x9177,0x5BB6,0x4E50))
+  $jianyingCn = -join ([char[]](0x526A,0x6620,0x4E13,0x4E1A,0x7248))
+  $banjiajiaCn = -join ([char[]](0x626E,0x5BB6,0x5BB6))
+  $liuyunkuCn = -join ([char[]](0x6E9C,0x4E91,0x5E93))
 
   $tgt += T "Autodesk" "%APPDATA%\Autodesk"
   $tgt += T "Autodesk" "%LOCALAPPDATA%\Autodesk"
@@ -291,11 +297,13 @@ function Standard-Targets {
   $tgt += T "Photoshop" "%LOCALAPPDATA%\Adobe\OOBE"
   $tgt += T "Photoshop" "%APPDATA%\Adobe\OOBE"
 
-  foreach ($n in @("Kujiale","Coohom","D5 Render","D5Render","Banjiajia","Liuyunku")) {
-    $app = if ($n -like "D5*") { "D5 Render" } elseif ($n -in @("Kujiale","Coohom")) { "Kujiale" } else { $n }
+  foreach ($n in @("Kujiale","Coohom","D5 Render","D5Render","Banjiajia","Liuyunku",$kujialeCn,$banjiajiaCn,$liuyunkuCn)) {
+    $app = if ($n -like "D5*") { "D5 Render" } elseif ($n -in @("Kujiale","Coohom",$kujialeCn)) { "Kujiale" } elseif ($n -in @("Banjiajia",$banjiajiaCn)) { "Banjiajia" } elseif ($n -in @("Liuyunku",$liuyunkuCn)) { "Liuyunku" } else { $n }
     $tgt += T $app "%APPDATA%\$n"
     $tgt += T $app "%LOCALAPPDATA%\$n"
   }
+  $tgt += T "D5 Render" "%APPDATA%\temp\D5"
+  $tgt += T "D5 Render" "%LOCALAPPDATA%\d5_immerse"
 
   $tgt += T "Sunlogin" "%APPDATA%\SunloginClient"
   $tgt += T "Sunlogin" "%LOCALAPPDATA%\SunloginClient"
@@ -334,11 +342,13 @@ function Standard-Targets {
   $tgt += T "Office" "HKCU:\Software\Microsoft\Office\16.0\Common\Identity" "RegistryKey"
   $tgt += T "Office" "HKCU:\Software\Microsoft\Office\15.0\Common\Identity" "RegistryKey"
 
-  foreach ($n in @("JianyingPro","CapCut","EdrawMind","MindMaster","Eagle")) {
-    $app = if ($n -eq "JianyingPro") { "Jianying" } elseif ($n -eq "MindMaster") { "EdrawMind" } else { $n }
+  foreach ($n in @("JianyingPro",$jianyingCn,"CapCut","EdrawMind","MindMaster","Eagle")) {
+    $app = if ($n -eq "JianyingPro" -or $n -eq $jianyingCn) { "Jianying" } elseif ($n -eq "MindMaster") { "EdrawMind" } else { $n }
     $tgt += T $app "%APPDATA%\$n"
     $tgt += T $app "%LOCALAPPDATA%\$n"
   }
+  $tgt += T "Jianying" "%LOCALAPPDATA%\JianyingPro\User Data\Projects\com.lveditor.draft"
+  $tgt += T "Jianying" "%LOCALAPPDATA%\JianyingPro\User Data\Cache"
 
   $tgt += T "Chrome" "%LOCALAPPDATA%\Google\Chrome\User Data"
   $tgt += T "Edge" "%LOCALAPPDATA%\Microsoft\Edge\User Data"
@@ -357,7 +367,7 @@ function Discovered-Targets {
   $names = @(
     "WeChat Files","Tencent Files","QQ Files","BaiduNetdiskDownload",
     "BaiduNetdisk","Eagle Library","Eagle","D5 Render","D5Render",
-    "JianyingPro","CapCut","SketchUp","3dsMax","AutoCAD","Autodesk",
+    "*.library","JianyingPro","com.lveditor.draft","CapCut","SketchUp","3dsMax","AutoCAD","Autodesk",
     "Kujiale","Coohom","Photoshop","Rhino","McNeel","Feishu","Lark",
     "LarkShell","WPS Cloud Files","Kingsoft","EdrawMind","MindMaster",
     "SunloginClient","AweSun","Oray","Liuyunku","Banjiajia"
