@@ -197,7 +197,7 @@ function Is-DiscoveredPathAllowed {
   $leaf = Split-Path -Leaf $Path
   $allowedLeaves = @(
     "WeChat Files","Tencent Files","QQ Files","BaiduNetdiskDownload",
-    "com.lveditor.draft","Cache","User Data","Projects","Project",
+    "xwechat_files","com.lveditor.draft","Cache","User Data","Projects","Project",
     "D5 Render","D5Render","d5_immerse","SunloginClient","AweSun",
     "Oray","LarkShell","Feishu","Lark","Kingsoft","WPS Cloud Files"
   )
@@ -340,6 +340,7 @@ function Get-QqDataFolders {
 
 function Get-WeChatConfiguredFolders {
   $folders = New-Object System.Collections.Generic.List[string]
+  $candidates = New-Object System.Collections.Generic.List[string]
   $roots = @(
     "$env:APPDATA\Tencent\WeChat",
     "$env:LOCALAPPDATA\Tencent\WeChat"
@@ -354,10 +355,25 @@ function Get-WeChatConfiguredFolders {
       ForEach-Object {
         Get-Content -LiteralPath $_.FullName -ErrorAction SilentlyContinue | ForEach-Object {
           if ($_ -match "([A-Za-z]:\\[^`"<>|]+?(?:WeChat Files|xwechat_files)[^`"<>|]*)") {
-            $folders.Add($Matches[1].Trim())
+            $candidates.Add($Matches[1].Trim())
+          } elseif ($_ -match "([A-Za-z]:\\[^`"<>|]+)") {
+            $candidates.Add($Matches[1].Trim())
           }
         }
       }
+  }
+
+  foreach ($candidate in ($candidates | Select-Object -Unique)) {
+    $expanded = Xp $candidate
+    foreach ($path in @(
+      $expanded,
+      (Join-Path $expanded "WeChat Files"),
+      (Join-Path $expanded "xwechat_files")
+    )) {
+      if (Test-Path -LiteralPath $path -PathType Container) {
+        $folders.Add($path)
+      }
+    }
   }
 
   $folders |
