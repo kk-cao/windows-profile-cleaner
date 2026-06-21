@@ -55,13 +55,23 @@ function Stop-Apps {
     "LarkShell","D5 Render","D5Render","MindMaster","EdrawMind",
     "WPS","wps","et","wpp","WINWORD","EXCEL","POWERPNT","OUTLOOK",
     "ONENOTE","JianyingPro","CapCut","chrome","msedge","wemeetapp",
-    "TencentMeeting","Eagle","KuJiaLe","Coohom",$kujialeProcess
+    "TencentMeeting","Eagle","KuJiaLe","Coohom","LiuYunKu4","LiuYunKu",$kujialeProcess
   ) | Select-Object -Unique
 
   foreach ($name in $names) {
     Get-Process -Name $name -ErrorAction SilentlyContinue | ForEach-Object {
       Warn "Closing process: $($_.ProcessName) ($($_.Id))"
       Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
+    }
+  }
+
+  Get-CimInstance Win32_Process -Filter "Name = 'chromium.exe'" -ErrorAction SilentlyContinue | ForEach-Object {
+    $cmd = $_.CommandLine
+    $exe = $_.ExecutablePath
+    if ($cmd -like "*LiuYunKu*" -or $cmd -like "*3D66*" -or
+        $exe -like "*LiuYunKu*" -or $exe -like "*3D66*") {
+      Warn "Closing process: chromium ($($_.ProcessId))"
+      Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
     }
   }
 }
@@ -199,7 +209,7 @@ function Is-DiscoveredPathAllowed {
     "WeChat Files","Tencent Files","QQ Files","BaiduNetdiskDownload",
     "xwechat_files","com.lveditor.draft","Cache","User Data","Projects","Project",
     "D5 Render","D5Render","d5_immerse","SunloginClient","AweSun",
-    "Oray","LarkShell","Feishu","Lark","Kingsoft","WPS Cloud Files"
+    "Oray","LarkShell","Feishu","Lark","Kingsoft","WPS Cloud Files","3D66"
   )
 
   foreach ($allowed in $allowedLeaves) {
@@ -254,6 +264,7 @@ function App-FromLeaf {
     "Tencent Files" { "QQ"; break }
     "QQ Files" { "QQ"; break }
     "Baidu*" { "BaiduNetdisk"; break }
+    "3D66" { "Liuyunku"; break }
     "D5*" { "D5 Render"; break }
     "Jianying*" { "Jianying"; break }
     "com.lveditor.draft" { "Jianying"; break }
@@ -528,7 +539,7 @@ function Discovered-Targets {
     "JianyingPro","com.lveditor.draft","CapCut",
     "Kujiale","Coohom","Photoshop","Rhino","McNeel","Feishu","Lark",
     "LarkShell","WPS Cloud Files","Kingsoft","EdrawMind","MindMaster",
-    "SunloginClient","AweSun","Oray","Liuyunku","Banjiajia"
+    "SunloginClient","AweSun","Oray","Liuyunku","Banjiajia","3D66"
   )
 
   Find-NamedDirs -Roots $roots -Names $names -MaxDepth 7 |
