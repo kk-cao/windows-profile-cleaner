@@ -250,6 +250,7 @@ function App-FromLeaf {
   param([string]$Leaf)
   switch -Wildcard ($Leaf) {
     "WeChat Files" { "WeChat"; break }
+    "xwechat_files" { "WeChat"; break }
     "Tencent Files" { "QQ"; break }
     "QQ Files" { "QQ"; break }
     "Baidu*" { "BaiduNetdisk"; break }
@@ -301,6 +302,62 @@ function Get-DocumentFolders {
     if ($props -and $props.Personal) {
       $folders.Add((Xp $props.Personal))
     }
+  }
+
+  $folders |
+    Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+    ForEach-Object {
+      try { [IO.Path]::GetFullPath($_).TrimEnd("\") } catch { $_ }
+    } |
+    Select-Object -Unique
+}
+
+function Get-QqDataFolders {
+  $folders = New-Object System.Collections.Generic.List[string]
+  $iniPaths = @(
+    "$env:PUBLIC\Documents\Tencent\QQ\UserDataInfo.ini",
+    "$env:USERPROFILE\Documents\Tencent\QQ\UserDataInfo.ini"
+  )
+
+  foreach ($ini in $iniPaths) {
+    $p = Xp $ini
+    if (-not (Test-Path -LiteralPath $p -PathType Leaf)) { continue }
+
+    Get-Content -LiteralPath $p -ErrorAction SilentlyContinue | ForEach-Object {
+      if ($_ -match "^\s*UserDataSavePath\s*=\s*(.+?)\s*$") {
+        $folders.Add((Xp $Matches[1].Trim()))
+      }
+    }
+  }
+
+  $folders |
+    Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+    ForEach-Object {
+      try { [IO.Path]::GetFullPath($_).TrimEnd("\") } catch { $_ }
+    } |
+    Select-Object -Unique
+}
+
+function Get-WeChatConfiguredFolders {
+  $folders = New-Object System.Collections.Generic.List[string]
+  $roots = @(
+    "$env:APPDATA\Tencent\WeChat",
+    "$env:LOCALAPPDATA\Tencent\WeChat"
+  )
+
+  foreach ($root in $roots) {
+    $expandedRoot = Xp $root
+    if (-not (Test-Path -LiteralPath $expandedRoot -PathType Container)) { continue }
+
+    Get-ChildItem -LiteralPath $expandedRoot -Recurse -File -Include "*.ini","*.conf","*.config" -ErrorAction SilentlyContinue |
+      Select-Object -First 100 |
+      ForEach-Object {
+        Get-Content -LiteralPath $_.FullName -ErrorAction SilentlyContinue | ForEach-Object {
+          if ($_ -match "([A-Za-z]:\\[^`"<>|]+?(?:WeChat Files|xwechat_files)[^`"<>|]*)") {
+            $folders.Add($Matches[1].Trim())
+          }
+        }
+      }
   }
 
   $folders |
@@ -380,12 +437,22 @@ function Standard-Targets {
 
   $tgt += T "WeChat" "%APPDATA%\Tencent\WeChat"
   $tgt += T "WeChat" "%LOCALAPPDATA%\Tencent\WeChat"
+  $tgt += T "WeChat" "%APPDATA%\Tencent\xwechat"
+  $tgt += T "WeChat" "%USERPROFILE%\xwechat_files"
+  $tgt += T "WeChat" "%LOCALAPPDATA%\Packages\TencentWeChatLimited.forWindows10_*\LocalCache\Roaming\Tencent\WeChatAppStore"
   $tgt += T "QQ" "%APPDATA%\Tencent\QQ"
   $tgt += T "QQ" "%LOCALAPPDATA%\Tencent\QQ"
   foreach ($doc in Get-DocumentFolders) {
     $tgt += T "WeChat" (Join-Path $doc "WeChat Files")
+    $tgt += T "WeChat" (Join-Path $doc "xwechat_files")
     $tgt += T "QQ" (Join-Path $doc "Tencent Files")
     $tgt += T "QQ" (Join-Path $doc "QQ Files")
+  }
+  foreach ($wx in Get-WeChatConfiguredFolders) {
+    $tgt += T "WeChat" $wx
+  }
+  foreach ($qq in Get-QqDataFolders) {
+    $tgt += T "QQ" $qq
   }
 
   $tgt += T "BaiduNetdisk" "%APPDATA%\Baidu\BaiduNetdisk"
@@ -440,7 +507,7 @@ function Discovered-Targets {
   $roots = $roots | Select-Object -Unique
 
   $names = @(
-    "WeChat Files","Tencent Files","QQ Files","BaiduNetdiskDownload",
+    "WeChat Files","xwechat_files","Tencent Files","QQ Files","BaiduNetdiskDownload",
     "BaiduNetdisk","D5 Render","D5Render",
     "JianyingPro","com.lveditor.draft","CapCut",
     "Kujiale","Coohom","Photoshop","Rhino","McNeel","Feishu","Lark",
