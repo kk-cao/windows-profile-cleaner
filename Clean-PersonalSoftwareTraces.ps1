@@ -265,6 +265,8 @@ function App-FromLeaf {
     "QQ Files" { "QQ"; break }
     "Baidu*" { "BaiduNetdisk"; break }
     "3D66" { "Liuyunku"; break }
+    "Liuyunku*" { "Liuyunku"; break }
+    "liuyunku*" { "Liuyunku"; break }
     "D5*" { "D5 Render"; break }
     "Jianying*" { "Jianying"; break }
     "com.lveditor.draft" { "Jianying"; break }
@@ -449,8 +451,8 @@ function Standard-Targets {
   $tgt += T "Photoshop" "%LOCALAPPDATA%\Adobe\OOBE"
   $tgt += T "Photoshop" "%APPDATA%\Adobe\OOBE"
 
-  foreach ($n in @("Kujiale","Coohom","D5 Render","D5Render","Banjiajia","Liuyunku",$kujialeCn,$banjiajiaCn,$liuyunkuCn)) {
-    $app = if ($n -like "D5*") { "D5 Render" } elseif ($n -in @("Kujiale","Coohom",$kujialeCn)) { "Kujiale" } elseif ($n -in @("Banjiajia",$banjiajiaCn)) { "Banjiajia" } elseif ($n -in @("Liuyunku",$liuyunkuCn)) { "Liuyunku" } else { $n }
+  foreach ($n in @("Kujiale","Coohom","D5 Render","D5Render","Banjiajia","Liuyunku","liuyunku","Liuyunku4","liuyunku4","3D66",$kujialeCn,$banjiajiaCn,$liuyunkuCn)) {
+    $app = if ($n -like "D5*") { "D5 Render" } elseif ($n -in @("Kujiale","Coohom",$kujialeCn)) { "Kujiale" } elseif ($n -in @("Banjiajia",$banjiajiaCn)) { "Banjiajia" } elseif ($n -in @("Liuyunku","liuyunku","Liuyunku4","liuyunku4","3D66",$liuyunkuCn)) { "Liuyunku" } else { $n }
     $tgt += T $app "%APPDATA%\$n"
     $tgt += T $app "%LOCALAPPDATA%\$n"
   }
@@ -539,7 +541,7 @@ function Discovered-Targets {
     "JianyingPro","com.lveditor.draft","CapCut",
     "Kujiale","Coohom","Photoshop","Rhino","McNeel","Feishu","Lark",
     "LarkShell","WPS Cloud Files","Kingsoft","EdrawMind","MindMaster",
-    "SunloginClient","AweSun","Oray","Liuyunku","Banjiajia","3D66"
+    "SunloginClient","AweSun","Oray","Liuyunku","liuyunku","Liuyunku4","liuyunku4","Banjiajia","3D66"
   )
 
   Find-NamedDirs -Roots $roots -Names $names -MaxDepth 7 |
