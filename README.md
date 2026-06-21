@@ -14,7 +14,9 @@ The cleaner targets local user traces such as:
 - common C/D drive data folders for selected apps
 - selected ProgramData traces for Oray/AweSun and Autodesk licensing cache
 
-Covered application families include Autodesk AutoCAD, 3ds Max, SketchUp, Rhino, Photoshop, D5 Render, Kujiale/Coohom, Sunlogin/AweSun, WeChat, QQ, Baidu Netdisk, Feishu/Lark, WPS, Microsoft Office, Jianying/CapCut, EdrawMind/MindMaster, Eagle, Chrome, Edge, Tencent Meeting, Liuyunku, and Banjiajia.
+Covered application families include Autodesk AutoCAD, 3ds Max, SketchUp, Rhino, Photoshop, D5 Render, Kujiale/Coohom, Sunlogin/AweSun, WeChat, QQ, Baidu Netdisk, Feishu/Lark, WPS, Microsoft Office, Jianying/CapCut, EdrawMind/MindMaster, Eagle app state, Chrome, Edge, Tencent Meeting, Liuyunku, and Banjiajia.
+
+Eagle user libraries are not automatically deleted. Remove them manually if needed.
 
 ## Safety Model
 

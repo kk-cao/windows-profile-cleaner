@@ -136,6 +136,15 @@ function Is-ProtectedTarget {
     return $true
   }
 
+  $installLikeNames = @(
+    "Software","Soft","Apps","App","Applications","Tools","DesignTools",
+    "Program","Programs","Program Files","Program Files (x86)"
+  )
+  $parts = $full -split "[\\/]"
+  foreach ($part in $parts) {
+    if ($installLikeNames -contains $part) { return $true }
+  }
+
   return $false
 }
 
@@ -149,28 +158,53 @@ function Delete-Target {
     switch ($Target.Type) {
       "File" {
         if (Test-Path -LiteralPath $Target.Path -PathType Leaf) {
-          Remove-Item -LiteralPath $Target.Path -Force -ErrorAction SilentlyContinue
+          Remove-Item -LiteralPath $Target.Path -Force -ErrorAction Stop
         }
       }
       "Directory" {
         if (Test-Path -LiteralPath $Target.Path -PathType Container) {
-          Remove-Item -LiteralPath $Target.Path -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -LiteralPath $Target.Path -Recurse -Force -ErrorAction Stop
         }
       }
       "RegistryKey" {
         if (Test-Path -LiteralPath $Target.Path) {
-          Remove-Item -LiteralPath $Target.Path -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -LiteralPath $Target.Path -Recurse -Force -ErrorAction Stop
         }
       }
       "RegistryValue" {
         if (Test-Path -LiteralPath $Target.Path) {
-          Remove-ItemProperty -LiteralPath $Target.Path -Name $Target.ValueName -Force -ErrorAction SilentlyContinue
+          Remove-ItemProperty -LiteralPath $Target.Path -Name $Target.ValueName -Force -ErrorAction Stop
         }
       }
     }
   } catch {
     Warn "Failed: $($Target.Path) - $($_.Exception.Message)"
+    $script:DeleteFailures += [pscustomobject]@{
+      App = $Target.App
+      Type = $Target.Type
+      Path = $Target.Path
+      Reason = $_.Exception.Message
+    }
   }
+}
+
+function Is-DiscoveredPathAllowed {
+  param([string]$Path)
+
+  $leaf = Split-Path -Leaf $Path
+  $allowedLeaves = @(
+    "WeChat Files","Tencent Files","QQ Files","BaiduNetdiskDownload",
+    "com.lveditor.draft","Cache","User Data","Projects","Project",
+    "D5 Render","D5Render","d5_immerse","SunloginClient","AweSun",
+    "Oray","LarkShell","Feishu","Lark","Kingsoft","WPS Cloud Files"
+  )
+
+  foreach ($allowed in $allowedLeaves) {
+    if ($leaf -ieq $allowed -or $leaf -like $allowed) { return $true }
+  }
+
+  if ($Path -like "*\AppData\Roaming\*" -or $Path -like "*\AppData\Local\*") { return $true }
+  return $false
 }
 
 function Find-NamedDirs {
@@ -216,8 +250,6 @@ function App-FromLeaf {
     "Tencent Files" { "QQ"; break }
     "QQ Files" { "QQ"; break }
     "Baidu*" { "BaiduNetdisk"; break }
-    "Eagle*" { "Eagle"; break }
-    "*.library" { "Eagle"; break }
     "D5*" { "D5 Render"; break }
     "Jianying*" { "Jianying"; break }
     "com.lveditor.draft" { "Jianying"; break }
@@ -332,8 +364,12 @@ function Standard-Targets {
   $tgt += T "WPS" "%APPDATA%\Kingsoft"
   $tgt += T "WPS" "%LOCALAPPDATA%\Kingsoft"
   $tgt += T "WPS" "HKCU:\Software\Kingsoft\Office" "RegistryKey"
-  $tgt += T "Office" "%APPDATA%\Microsoft\Office"
-  $tgt += T "Office" "%LOCALAPPDATA%\Microsoft\Office"
+  $tgt += T "Office" "%APPDATA%\Microsoft\Office\Recent"
+  $tgt += T "Office" "%APPDATA%\Microsoft\Office\UnsavedFiles"
+  $tgt += T "Office" "%LOCALAPPDATA%\Microsoft\Office\16.0\OfficeFileCache"
+  $tgt += T "Office" "%LOCALAPPDATA%\Microsoft\Office\15.0\OfficeFileCache"
+  $tgt += T "Office" "%LOCALAPPDATA%\Microsoft\Office\16.0\Licensing"
+  $tgt += T "Office" "%LOCALAPPDATA%\Microsoft\Office\15.0\Licensing"
   $tgt += T "Office" "%LOCALAPPDATA%\Microsoft\OneAuth"
   $tgt += T "Office" "%LOCALAPPDATA%\Microsoft\IdentityCache"
   $tgt += T "Office" "%LOCALAPPDATA%\Microsoft\TokenBroker"
@@ -366,8 +402,8 @@ function Discovered-Targets {
 
   $names = @(
     "WeChat Files","Tencent Files","QQ Files","BaiduNetdiskDownload",
-    "BaiduNetdisk","Eagle Library","Eagle","D5 Render","D5Render",
-    "*.library","JianyingPro","com.lveditor.draft","CapCut","SketchUp","3dsMax","AutoCAD","Autodesk",
+    "BaiduNetdisk","D5 Render","D5Render",
+    "JianyingPro","com.lveditor.draft","CapCut",
     "Kujiale","Coohom","Photoshop","Rhino","McNeel","Feishu","Lark",
     "LarkShell","WPS Cloud Files","Kingsoft","EdrawMind","MindMaster",
     "SunloginClient","AweSun","Oray","Liuyunku","Banjiajia"
@@ -375,6 +411,7 @@ function Discovered-Targets {
 
   Find-NamedDirs -Roots $roots -Names $names -MaxDepth 7 |
     Select-Object -Unique |
+    Where-Object { Is-DiscoveredPathAllowed $_ } |
     ForEach-Object { T (App-FromLeaf (Split-Path -Leaf $_)) $_ "Directory" }
 }
 
@@ -398,6 +435,7 @@ if ($Mode -eq "Clean" -and $KillProcesses) {
   Warn "Target applications should be closed. Use -KillProcesses for stronger cleanup."
 }
 
+$script:DeleteFailures = @()
 $all = @()
 $all += Standard-Targets
 $all += Discovered-Targets
@@ -469,19 +507,37 @@ foreach ($x in $cleanable) {
 }
 
 $failed = $cleanable | Where-Object { Exists $_ }
+$allFailureApps = @()
+if ($script:DeleteFailures) {
+  $allFailureApps += $script:DeleteFailures | Select-Object -ExpandProperty App
+}
 if ($failed) {
+  $allFailureApps += $failed | Select-Object -ExpandProperty App
+}
+
+if ($allFailureApps) {
   Say ""
-  Warn "Some apps were not fully cleaned. Remaining targets were still found after deletion."
+  Warn "Some apps were not fully cleaned."
   Say "Apps with remaining traces:" "Yellow"
-  $failedApps = $failed | Select-Object -ExpandProperty App -Unique | Sort-Object
+  $failedApps = $allFailureApps | Sort-Object -Unique
   foreach ($app in $failedApps) {
     Say ("  - {0}" -f $app) "Yellow"
   }
 
+  if ($script:DeleteFailures) {
+    Say ""
+    Say "Delete errors:" "Yellow"
+    foreach ($x in $script:DeleteFailures) {
+      Say ("  [{0}] {1} {2} :: {3}" -f $x.App, $x.Type, $x.Path, $x.Reason) "Yellow"
+    }
+  }
+
   Say ""
-  Say "Remaining targets:" "Yellow"
-  foreach ($x in $failed) {
-    Say ("  [{0}] {1} {2}" -f $x.App, $x.Type, $x.Path) "Yellow"
+  if ($failed) {
+    Say "Remaining targets still found after deletion:" "Yellow"
+    foreach ($x in $failed) {
+      Say ("  [{0}] {1} {2}" -f $x.App, $x.Type, $x.Path) "Yellow"
+    }
   }
 } else {
   Say ""
