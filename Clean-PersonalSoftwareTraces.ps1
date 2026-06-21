@@ -49,7 +49,9 @@ function Stop-Apps {
   $names = @(
     "acad","AcLauncher","3dsmax","SketchUp","Rhino","Photoshop",
     "Creative Cloud","SunloginClient","SunloginRemote","AweSun",
-    "WeChat","Weixin","QQ","TIM","BaiduNetdisk","Feishu","Lark",
+    "WeChat","Weixin","WeChatAppEx","WeChatBrowser","WeChatOCR",
+    "WeChatUtility","WeChatPlayer","QQ","QQProtect","QQExternal",
+    "QQScLauncher","TIM","BaiduNetdisk","Feishu","Lark",
     "LarkShell","D5 Render","D5Render","MindMaster","EdrawMind",
     "WPS","wps","et","wpp","WINWORD","EXCEL","POWERPNT","OUTLOOK",
     "ONENOTE","JianyingPro","CapCut","chrome","msedge","wemeetapp",
@@ -276,6 +278,39 @@ function App-FromLeaf {
   }
 }
 
+function Get-DocumentFolders {
+  $folders = New-Object System.Collections.Generic.List[string]
+
+  foreach ($path in @(
+    "$env:USERPROFILE\Documents",
+    "$env:USERPROFILE\OneDrive\Documents",
+    "$env:OneDrive\Documents",
+    "$env:OneDriveCommercial\Documents",
+    "$env:OneDriveConsumer\Documents"
+  )) {
+    if (-not [string]::IsNullOrWhiteSpace($path)) {
+      $folders.Add((Xp $path))
+    }
+  }
+
+  foreach ($key in @(
+    "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders",
+    "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders"
+  )) {
+    $props = Get-ItemProperty -LiteralPath $key -ErrorAction SilentlyContinue
+    if ($props -and $props.Personal) {
+      $folders.Add((Xp $props.Personal))
+    }
+  }
+
+  $folders |
+    Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+    ForEach-Object {
+      try { [IO.Path]::GetFullPath($_).TrimEnd("\") } catch { $_ }
+    } |
+    Select-Object -Unique
+}
+
 function Installed-Hints {
   $patterns = @(
     "Autodesk","AutoCAD","3ds Max","3dsMax","SketchUp","Rhino",
@@ -345,10 +380,13 @@ function Standard-Targets {
 
   $tgt += T "WeChat" "%APPDATA%\Tencent\WeChat"
   $tgt += T "WeChat" "%LOCALAPPDATA%\Tencent\WeChat"
-  $tgt += T "WeChat" "%USERPROFILE%\Documents\WeChat Files"
   $tgt += T "QQ" "%APPDATA%\Tencent\QQ"
   $tgt += T "QQ" "%LOCALAPPDATA%\Tencent\QQ"
-  $tgt += T "QQ" "%USERPROFILE%\Documents\Tencent Files"
+  foreach ($doc in Get-DocumentFolders) {
+    $tgt += T "WeChat" (Join-Path $doc "WeChat Files")
+    $tgt += T "QQ" (Join-Path $doc "Tencent Files")
+    $tgt += T "QQ" (Join-Path $doc "QQ Files")
+  }
 
   $tgt += T "BaiduNetdisk" "%APPDATA%\Baidu\BaiduNetdisk"
   $tgt += T "BaiduNetdisk" "%LOCALAPPDATA%\Baidu\BaiduNetdisk"
