@@ -45,6 +45,7 @@ function T {
 }
 
 function Stop-Apps {
+  $kujialeProcess = -join ([char[]](0x9177,0x5BB6,0x4E50))
   $names = @(
     "acad","AcLauncher","3dsmax","SketchUp","Rhino","Photoshop",
     "Creative Cloud","SunloginClient","SunloginRemote","AweSun",
@@ -52,7 +53,7 @@ function Stop-Apps {
     "LarkShell","D5 Render","D5Render","MindMaster","EdrawMind",
     "WPS","wps","et","wpp","WINWORD","EXCEL","POWERPNT","OUTLOOK",
     "ONENOTE","JianyingPro","CapCut","chrome","msedge","wemeetapp",
-    "TencentMeeting","Eagle","KuJiaLe","Coohom"
+    "TencentMeeting","Eagle","KuJiaLe","Coohom",$kujialeProcess
   ) | Select-Object -Unique
 
   foreach ($name in $names) {
