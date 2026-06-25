@@ -52,7 +52,7 @@ function Stop-Apps {
     "WeChat","Weixin","WeChatAppEx","WeChatBrowser","WeChatOCR",
     "WeChatUtility","WeChatPlayer","QQ","QQProtect","QQExternal",
     "QQScLauncher","TIM","BaiduNetdisk","Feishu","Lark",
-    "LarkShell","D5 Render","D5Render","MindMaster","EdrawMind",
+    "LarkShell","D5 Render","D5Render","MindMaster","EdrawMind","Edraw",
     "WPS","wps","et","wpp","WINWORD","EXCEL","POWERPNT","OUTLOOK",
     "ONENOTE","JianyingPro","CapCut","chrome","msedge","wemeetapp",
     "TencentMeeting","Eagle","KuJiaLe","Coohom","LiuYunKu4","LiuYunKu",$kujialeProcess
@@ -284,6 +284,7 @@ function App-FromLeaf {
     "Kingsoft" { "WPS"; break }
     "WPS*" { "WPS"; break }
     "EdrawMind" { "EdrawMind"; break }
+    "Edraw" { "EdrawMind"; break }
     "MindMaster" { "EdrawMind"; break }
     "Sunlogin*" { "Sunlogin"; break }
     "AweSun" { "Sunlogin"; break }
@@ -402,7 +403,7 @@ function Installed-Hints {
     "Autodesk","AutoCAD","3ds Max","3dsMax","SketchUp","Rhino",
     "Photoshop","Adobe","D5","Sunlogin","AweSun","WeChat","QQ",
     "BaiduNetdisk","Feishu","Lark","WPS","Office","Microsoft 365",
-    "Jianying","CapCut","Eagle","EdrawMind","MindMaster","Kujiale",
+    "Jianying","CapCut","Eagle","EdrawMind","Edraw","MindMaster","Kujiale",
     "Coohom"
   )
   $keys = @(
@@ -513,8 +514,8 @@ function Standard-Targets {
   $tgt += T "Office" "HKCU:\Software\Microsoft\Office\16.0\Common\Identity" "RegistryKey"
   $tgt += T "Office" "HKCU:\Software\Microsoft\Office\15.0\Common\Identity" "RegistryKey"
 
-  foreach ($n in @("JianyingPro",$jianyingCn,"CapCut","EdrawMind","MindMaster","Eagle")) {
-    $app = if ($n -eq "JianyingPro" -or $n -eq $jianyingCn) { "Jianying" } elseif ($n -eq "MindMaster") { "EdrawMind" } else { $n }
+  foreach ($n in @("JianyingPro",$jianyingCn,"CapCut","EdrawMind","Edraw","MindMaster","Eagle")) {
+    $app = if ($n -eq "JianyingPro" -or $n -eq $jianyingCn) { "Jianying" } elseif ($n -in @("MindMaster","Edraw")) { "EdrawMind" } else { $n }
     $tgt += T $app "%APPDATA%\$n"
     $tgt += T $app "%LOCALAPPDATA%\$n"
   }
@@ -540,7 +541,7 @@ function Discovered-Targets {
     "BaiduNetdisk","D5 Render","D5Render",
     "JianyingPro","com.lveditor.draft","CapCut",
     "Kujiale","Coohom","Photoshop","Rhino","McNeel","Feishu","Lark",
-    "LarkShell","WPS Cloud Files","Kingsoft","EdrawMind","MindMaster",
+    "LarkShell","WPS Cloud Files","Kingsoft","EdrawMind","Edraw","MindMaster",
     "SunloginClient","AweSun","Oray","Liuyunku","liuyunku","Liuyunku4","liuyunku4","Banjiajia","3D66"
   )
 
