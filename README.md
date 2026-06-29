@@ -53,8 +53,9 @@ Recommended:
 1. Right-click `Run-Clean-As-Admin.bat`.
 2. Choose "Run as administrator".
 3. Review the matched cleanup targets.
-4. Type `CLEAN` to confirm deletion.
-5. Restart Windows after cleanup.
+4. For each target you want to delete, type `CLEAN` when prompted.
+5. Press Enter or type anything else to skip a target.
+6. Restart Windows after cleanup.
 
 Preview only:
 

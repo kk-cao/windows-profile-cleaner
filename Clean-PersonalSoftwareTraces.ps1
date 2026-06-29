@@ -2,7 +2,7 @@
 <#
 Portable cleaner for local personal traces of selected Windows apps.
 
-Default mode is Discover and deletes nothing. Clean mode requires typing CLEAN.
+Default mode is Discover and deletes nothing. Clean mode requires typing CLEAN for each target.
 Copy this file together with Run-Clean-As-Admin.bat to the target computer.
 #>
 
@@ -627,22 +627,27 @@ if ($Mode -eq "Discover") {
   exit 0
 }
 
-if (-not $NoPrompt) {
-  Say ""
-  Warn "Clean mode will permanently delete all matched targets above. No backup and no log will be created."
-  $answer = Read-Host "Type CLEAN to continue"
-  if ($answer -cne "CLEAN") {
-    Warn "Cancelled. Nothing was deleted."
-    exit 1
-  }
-}
-
+$attempted = @()
+$skipped = @()
 foreach ($x in $cleanable) {
+  if (-not $NoPrompt) {
+    $label = if ($x.Type -eq "RegistryValue") { "$($x.Path) :: $($x.ValueName)" } else { $x.Path }
+    Say ""
+    Warn "No backup and no log will be created."
+    $answer = Read-Host "Type CLEAN to delete [$($x.App)] $label"
+    if ($answer -cne "CLEAN") {
+      Warn "Skipped: [$($x.App)] $label"
+      $skipped += $x
+      continue
+    }
+  }
+
+  $attempted += $x
   Say ("Deleting [{0}] {1}" -f $x.App, $x.Path)
   Delete-Target $x
 }
 
-$failed = $cleanable | Where-Object { Exists $_ }
+$failed = $attempted | Where-Object { Exists $_ }
 $allFailureApps = @()
 if ($script:DeleteFailures) {
   $allFailureApps += $script:DeleteFailures | Select-Object -ExpandProperty App
@@ -651,7 +656,18 @@ if ($failed) {
   $allFailureApps += $failed | Select-Object -ExpandProperty App
 }
 
-if ($allFailureApps) {
+if ($skipped) {
+  Say ""
+  Say "Skipped targets:" "Yellow"
+  foreach ($x in $skipped) {
+    Say ("  [{0}] {1} {2}" -f $x.App, $x.Type, $x.Path) "Yellow"
+  }
+}
+
+if (-not $attempted) {
+  Say ""
+  Warn "No targets were deleted."
+} elseif ($allFailureApps) {
   Say ""
   Warn "Some apps were not fully cleaned."
   Say "Apps with remaining traces:" "Yellow"
