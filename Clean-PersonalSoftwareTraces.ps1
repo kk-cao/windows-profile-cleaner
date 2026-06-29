@@ -11,8 +11,7 @@ param(
   [ValidateSet("Discover","Clean")]
   [string]$Mode = "Discover",
   [string[]]$Drives = @("C","D"),
-  [switch]$KillProcesses,
-  [switch]$NoPrompt
+  [switch]$KillProcesses
 )
 
 $ErrorActionPreference = "Continue"
@@ -256,6 +255,39 @@ function Find-NamedDirs {
   }
 }
 
+function Resolve-AllowedChildFolders {
+  param([string]$Path, [string[]]$AllowedNames)
+
+  $resolved = New-Object System.Collections.Generic.List[string]
+  if ([string]::IsNullOrWhiteSpace($Path)) { return $resolved }
+
+  $expanded = Xp $Path
+  try {
+    $full = [IO.Path]::GetFullPath($expanded).TrimEnd("\")
+  } catch {
+    return $resolved
+  }
+
+  $leaf = Split-Path -Leaf $full
+  foreach ($allowed in $AllowedNames) {
+    if ($leaf -ieq $allowed) {
+      if (Test-Path -LiteralPath $full -PathType Container) {
+        $resolved.Add($full)
+      }
+      return $resolved
+    }
+  }
+
+  foreach ($allowed in $AllowedNames) {
+    $child = Join-Path $full $allowed
+    if (Test-Path -LiteralPath $child -PathType Container) {
+      $resolved.Add($child)
+    }
+  }
+
+  return ($resolved | Select-Object -Unique)
+}
+
 function App-FromLeaf {
   param([string]$Leaf)
   switch -Wildcard ($Leaf) {
@@ -328,6 +360,7 @@ function Get-DocumentFolders {
 
 function Get-QqDataFolders {
   $folders = New-Object System.Collections.Generic.List[string]
+  $candidates = New-Object System.Collections.Generic.List[string]
   $iniPaths = @(
     "$env:PUBLIC\Documents\Tencent\QQ\UserDataInfo.ini",
     "$env:USERPROFILE\Documents\Tencent\QQ\UserDataInfo.ini"
@@ -339,8 +372,14 @@ function Get-QqDataFolders {
 
     Get-Content -LiteralPath $p -ErrorAction SilentlyContinue | ForEach-Object {
       if ($_ -match "^\s*UserDataSavePath\s*=\s*(.+?)\s*$") {
-        $folders.Add((Xp $Matches[1].Trim()))
+        $candidates.Add((Xp $Matches[1].Trim()))
       }
+    }
+  }
+
+  foreach ($candidate in ($candidates | Select-Object -Unique)) {
+    foreach ($path in Resolve-AllowedChildFolders $candidate @("Tencent Files","QQ Files")) {
+      $folders.Add($path)
     }
   }
 
@@ -378,15 +417,8 @@ function Get-WeChatConfiguredFolders {
   }
 
   foreach ($candidate in ($candidates | Select-Object -Unique)) {
-    $expanded = Xp $candidate
-    foreach ($path in @(
-      $expanded,
-      (Join-Path $expanded "WeChat Files"),
-      (Join-Path $expanded "xwechat_files")
-    )) {
-      if (Test-Path -LiteralPath $path -PathType Container) {
-        $folders.Add($path)
-      }
+    foreach ($path in Resolve-AllowedChildFolders $candidate @("WeChat Files","xwechat_files")) {
+      $folders.Add($path)
     }
   }
 
@@ -630,16 +662,14 @@ if ($Mode -eq "Discover") {
 $attempted = @()
 $skipped = @()
 foreach ($x in $cleanable) {
-  if (-not $NoPrompt) {
-    $label = if ($x.Type -eq "RegistryValue") { "$($x.Path) :: $($x.ValueName)" } else { $x.Path }
-    Say ""
-    Warn "No backup and no log will be created."
-    $answer = Read-Host "Type CLEAN to delete [$($x.App)] $label"
-    if ($answer -cne "CLEAN") {
-      Warn "Skipped: [$($x.App)] $label"
-      $skipped += $x
-      continue
-    }
+  $label = if ($x.Type -eq "RegistryValue") { "$($x.Path) :: $($x.ValueName)" } else { $x.Path }
+  Say ""
+  Warn "No backup and no log will be created."
+  $answer = Read-Host "Type CLEAN to delete [$($x.App)] $label"
+  if ($answer -cne "CLEAN") {
+    Warn "Skipped: [$($x.App)] $label"
+    $skipped += $x
+    continue
   }
 
   $attempted += $x
