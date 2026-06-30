@@ -57,6 +57,8 @@ Recommended:
 5. Press Enter or type anything else to skip a target.
 6. Restart Windows after cleanup.
 
+If you are running this through a remote-control session, skip Sunlogin/Oray/AweSun targets unless you have physical access or another remote channel. Cleaning those targets can disconnect the current remote session.
+
 Preview only:
 
 ```powershell

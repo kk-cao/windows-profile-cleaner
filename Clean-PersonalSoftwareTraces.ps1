@@ -47,7 +47,7 @@ function Stop-Apps {
   $kujialeProcess = -join ([char[]](0x9177,0x5BB6,0x4E50))
   $names = @(
     "acad","AcLauncher","3dsmax","SketchUp","Rhino","Photoshop",
-    "Creative Cloud","SunloginClient","SunloginRemote","AweSun",
+    "Creative Cloud",
     "WeChat","Weixin","WeChatAppEx","WeChatBrowser","WeChatOCR",
     "WeChatUtility","WeChatPlayer","QQ","QQProtect","QQExternal",
     "QQScLauncher","TIM","BaiduNetdisk","Feishu","Lark",
@@ -72,6 +72,20 @@ function Stop-Apps {
       Warn "Closing process: chromium ($($_.ProcessId))"
       Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
     }
+  }
+}
+
+function Warn-RemoteControlRisk {
+  $remoteNames = @("SunloginClient","SunloginRemote","AweSun")
+  $found = @()
+  foreach ($name in $remoteNames) {
+    $found += Get-Process -Name $name -ErrorAction SilentlyContinue
+  }
+
+  if ($found) {
+    Say ""
+    Warn "Remote control process detected. It will NOT be closed automatically."
+    Warn "If you are connected remotely, skip Sunlogin/Oray/AweSun cleanup targets or the session may disconnect."
   }
 }
 
@@ -598,8 +612,10 @@ if (-not $admin) {
 }
 
 if ($Mode -eq "Clean" -and $KillProcesses) {
+  Warn-RemoteControlRisk
   Stop-Apps
 } elseif ($Mode -eq "Clean") {
+  Warn-RemoteControlRisk
   Warn "Target applications should be closed. Use -KillProcesses for stronger cleanup."
 }
 
